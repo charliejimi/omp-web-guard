@@ -1,0 +1,29 @@
+{
+	"name": "omp-web-guard",
+	"version": "0.1.0",
+	"private": true,
+	"description": "An oh-my-pi (omp) extension pair for web reads: a URL guard that keeps read, grep, ast_grep, and ast_edit away from internal addresses (before the call, and after it for redirects and markdown alternates), and a content guard that withholds or labels untrusted web content, with one shared ledger.",
+	"type": "module",
+	"license": "MIT",
+	"keywords": ["oh-my-pi", "omp", "coding-agent", "ai-agent", "ssrf", "prompt-injection", "guardrails", "web"],
+	"omp": {
+		"extensions": ["./src/url-guard.ts", "./src/content-guard.ts"]
+	},
+	"bin": {
+		"web-guard-report": "./bin/web-guard-report.ts"
+	},
+	"files": ["src", "bin", "examples", "README.md", "README.zh-TW.md", "LICENSE", "CHANGELOG.md"],
+	"scripts": {
+		"test": "bun test/run.ts"
+	},
+	"engines": {
+		"bun": ">=1.3.14"
+	},
+	"devDependencies": {
+		"@oh-my-pi/pi-ai": "18.2.8",
+		"@oh-my-pi/pi-coding-agent": "18.2.8",
+		"@oh-my-pi/pi-tui": "18.2.8",
+		"@oh-my-pi/pi-utils": "18.2.8",
+		"@types/bun": "1.3.14"
+	}
+}

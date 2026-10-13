@@ -1,0 +1,8 @@
+{
+	"ledger": "~/.omp/web-guard-ledger.jsonl",
+	"allowRanges": ["10.20.30.40/32"],
+	"domainPolicy": { "allow": [], "deny": ["metadata.google.internal"] },
+	"labelChannel": "auto",
+	"nonceBoundary": true,
+	"lookupTimeoutMs": 5000
+}

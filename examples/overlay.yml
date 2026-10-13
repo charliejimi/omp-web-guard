@@ -1,0 +1,14 @@
+# omp-web-guard: the settings overlay from the Day25 diagram, step 8. Use it as
+#   omp --no-extensions -e <omp-web-guard> --config <this file> --tools read,web_search,task
+# and keep it outside the project, so the agent cannot edit the policy it runs under.
+tools:
+  approval:
+    # The guards inspect read, grep, ast_grep, ast_edit, and web_search. bash and eval can fetch a
+    # URL themselves (curl, fetch()) without either guard seeing it, so they are refused outright.
+    bash: deny
+    eval: deny
+    # Subagents get the same -e extensions, so delegated research is guarded too.
+    task: allow
+async:
+  # Subagents run in the foreground and finish before omp exits.
+  enabled: false

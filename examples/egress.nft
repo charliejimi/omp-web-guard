@@ -1,0 +1,109 @@
+#!/usr/sbin/nft -f
+# omp-web-guard: an example egress policy for the container or VM that runs omp (Day25 diagram, item 4).
+#
+# UNTESTED. This file has never been loaded: the machine it was written on has neither root nor
+# unprivileged user namespaces. Check it with `nft -c -f egress.nft`, try it in a throwaway network
+# namespace, and read every rule before you rely on it.
+#
+# For traffic leaving the machine (the output hook) it:
+#   - lets packets of established connections through;
+#   - lets DNS reach the resolver named in RESOLVER (change it: Docker's embedded DNS is 127.0.0.11,
+#     many clouds put the resolver in 169.254.0.0/16 or 10.0.0.0/8);
+#   - drops every destination in the guard's default ranges (blocked_v4, blocked_v6), including the
+#     IPv6 forms that reach those IPv4 addresses on the wire (NAT64 64:ff9b::/96, 6to4 2002::/16), and
+#     any IPv6 destination outside 2000::/3 other than NAT64;
+#   - lets TCP 80 and 443 out (the model API and public web pages);
+#   - drops everything else, loopback included: add an accept rule above the drops for a local
+#     service omp must reach.
+# Unlike the guard it applies to every process, every redirect hop, and the address actually
+# connected to, so DNS rebinding cannot get around it. The sets match the guard's default tables
+# (test/examples.test.ts compares them with src/net.ts). allowRanges in the guard config has no
+# counterpart here; add accept rules above the drops for the same ranges.
+
+define RESOLVER = 127.0.0.11
+
+table inet omp_egress {
+	set blocked_v4 {
+		type ipv4_addr
+		flags interval
+		elements = {
+			0.0.0.0/8,
+			10.0.0.0/8,
+			100.64.0.0/10,
+			127.0.0.0/8,
+			168.63.129.16/32,
+			169.254.0.0/16,
+			172.16.0.0/12,
+			192.0.0.0/24,
+			192.0.2.0/24,
+			192.88.99.0/24,
+			192.168.0.0/16,
+			198.18.0.0/15,
+			198.51.100.0/24,
+			203.0.113.0/24,
+			224.0.0.0/4,
+			240.0.0.0/4
+		}
+	}
+
+	set blocked_v6 {
+		type ipv6_addr
+		flags interval
+		elements = {
+			::/128,
+			::1/128,
+			64:ff9b:1::/48,
+			100::/64,
+			2001::/23,
+			2001:db8::/32,
+			3fff::/20,
+			fc00::/7,
+			fe80::/10,
+			fec0::/10,
+			ff00::/8,
+			64:ff9b::/104,
+			64:ff9b::a00:0/104,
+			64:ff9b::6440:0/106,
+			64:ff9b::7f00:0/104,
+			64:ff9b::a83f:8110/128,
+			64:ff9b::a9fe:0/112,
+			64:ff9b::ac10:0/108,
+			64:ff9b::c000:0/120,
+			64:ff9b::c000:200/120,
+			64:ff9b::c058:6300/120,
+			64:ff9b::c0a8:0/112,
+			64:ff9b::c612:0/111,
+			64:ff9b::c633:6400/120,
+			64:ff9b::cb00:7100/120,
+			64:ff9b::e000:0/100,
+			64:ff9b::f000:0/100,
+			2002::/24,
+			2002:a00::/24,
+			2002:6440::/26,
+			2002:7f00::/24,
+			2002:a83f:8110::/48,
+			2002:a9fe::/32,
+			2002:ac10::/28,
+			2002:c000::/40,
+			2002:c000:200::/40,
+			2002:c058:6300::/40,
+			2002:c0a8::/32,
+			2002:c612::/31,
+			2002:c633:6400::/40,
+			2002:cb00:7100::/40,
+			2002:e000::/20,
+			2002:f000::/20
+		}
+	}
+
+	chain output {
+		type filter hook output priority filter; policy drop;
+		ct state established,related accept
+		ip daddr $RESOLVER meta l4proto { tcp, udp } th dport 53 accept
+		ip daddr @blocked_v4 counter drop
+		ip6 daddr @blocked_v6 counter drop
+		ip6 daddr != 2000::/3 ip6 daddr != 64:ff9b::/96 counter drop
+		tcp dport { 80, 443 } accept
+		counter drop
+	}
+}
