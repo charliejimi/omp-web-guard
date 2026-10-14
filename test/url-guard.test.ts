@@ -201,6 +201,29 @@ describe("post-check (AC-3)", () => {
 		});
 	});
 
+	it("withholds an internal alternate written without `//`, which omp still fetches", async () => {
+		// omp passes an href that starts with "http" to fetch() as written, and fetch reads these as http://127.0.0.2:9/….
+		for (const note of [
+			"Used markdown alternate: http:127.0.0.2:9/metadata.md",
+			"Used markdown alternate: http:/127.0.0.2:9/metadata.md",
+			"Used markdown alternate: http:\\\\127.0.0.2:9\\metadata.md",
+			"Used feed alternate: https:127.0.0.2:9/feed",
+			"Extracted and converted document: http:127.0.0.2:9/doc.pdf",
+		]) {
+			const g = await urlGuard({ allowRanges: ["127.0.0.1/32"] });
+			const r = await g.toolResult(urlReadResult("http://127.0.0.1:9/pub/alternate", "INTERNAL-MARKER", { method: "alternate-markdown", notes: [note] }));
+			expect({ note, isError: r?.isError, leaked: textOf(r?.content).includes("INTERNAL-MARKER") }).toEqual({ note, isError: true, leaked: false });
+			expect(g.lines().at(-1)).toMatchObject({ event: "fetched", withheld: true });
+		}
+	});
+
+	it("passes a same-host alternate written without `//`", async () => {
+		const g = await urlGuard({ allowRanges: ["127.0.0.1/32"] });
+		const r = await g.toolResult(urlReadResult("http://127.0.0.1:9/pub/control", "page", { method: "alternate-markdown", notes: ["Used markdown alternate: http:127.0.0.1:9/pub/control.md"] }));
+		expect(r).toBeUndefined();
+		expect(g.lines()).toEqual([expect.objectContaining({ event: "fetched", via: [{ kind: "markdown alternate", source: "127.0.0.1:9/pub/control.md" }], withheld: false })]);
+	});
+
 	it("passes a same-host alternate and records it", async () => {
 		const g = await urlGuard({ allowRanges: ["127.0.0.1/32"] });
 		const r = await g.toolResult(urlReadResult("http://127.0.0.1:9/pub/control", "page", { method: "alternate-markdown", notes: ["Used markdown alternate: http://127.0.0.1:9/pub/control.md"] }));

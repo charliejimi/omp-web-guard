@@ -118,10 +118,10 @@ export interface Via {
 }
 
 const NOTE_KINDS: Array<[RegExp, string]> = [
-	[/^Used markdown alternate:/i, "markdown alternate"],
-	[/^Used feed alternate:/i, "feed alternate"],
-	[/^Used llms\.txt fallback:/i, "llms.txt fallback"],
-	[/^Extracted and converted document:/i, "extracted document"],
+	[/^Used markdown alternate:\s*/i, "markdown alternate"],
+	[/^Used feed alternate:\s*/i, "feed alternate"],
+	[/^Used llms\.txt fallback:\s*/i, "llms.txt fallback"],
+	[/^Extracted and converted document:\s*/i, "extracted document"],
 ];
 
 /** The other URLs a URL read fetched its content from, from omp's `details.notes`. */
@@ -130,8 +130,20 @@ export function viaOf(notes: unknown): Via[] {
 	const out: Via[] = [];
 	for (const note of notes) {
 		if (typeof note !== "string") continue;
-		const kind = NOTE_KINDS.find(([re]) => re.test(note))?.[1] ?? "note";
-		for (const m of note.matchAll(/https?:\/\/[^\s]+/gi)) out.push({ kind, url: m[0].replace(/[.,;)\]]+$/, "") });
+		const known = NOTE_KINDS.find(([re]) => re.test(note));
+		if (known) {
+			// omp passes the rest of the note to fetch() as written, and fetch reads `http:host`,
+			// `http:/host`, and `http:\\host` as `http://host`; canonicalize the same way so the check
+			// sees the host omp fetched. Text that does not parse stays as written and fails the check.
+			const raw = note.replace(known[0], "").trim();
+			let url = raw;
+			try {
+				url = new URL(raw).href;
+			} catch {}
+			out.push({ kind: known[1], url });
+			continue;
+		}
+		for (const m of note.matchAll(/https?:\/\/[^\s]+/gi)) out.push({ kind: "note", url: m[0].replace(/[.,;)\]]+$/, "") });
 	}
 	return out;
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1] - 2026-10-14
+
+### Fixed
+
+- The post-check reads the URL in omp's markdown alternate, feed alternate, `llms.txt`, and extracted-document notes the way omp's fetch does, so an alternate written `http:host/…`, `http:/host/…`, or `http:\\host\…` is checked. Before, only `http(s)://` was recognized, and such an alternate on an internal address reached the model, with the read reported as clean.
+
 ## [0.1.0] - 2026-10-13
 
 ### Added

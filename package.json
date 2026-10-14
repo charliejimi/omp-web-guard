@@ -1,6 +1,6 @@
 {
 	"name": "omp-web-guard",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": true,
 	"description": "An oh-my-pi (omp) extension pair for web reads: a URL guard that keeps read, grep, ast_grep, and ast_edit away from internal addresses (before the call, and after it for redirects and markdown alternates), and a content guard that withholds or labels untrusted web content, with one shared ledger.",
 	"type": "module",
